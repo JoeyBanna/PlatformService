@@ -1,6 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using PlatformService.AsyncDataServices;
+using PlatformService.Models.DTOs;
 using PlatformService.Repository;
+using PlatformService.SyncDataServices.HTTP;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,12 +16,17 @@ namespace PlatformService.Controllers
     {
         public readonly IPlatformRepo _PlatformRepo;
         public readonly IMapper _mapper;
+        public readonly ICommandDataClient _commandDataClient;
+        public readonly IMessageBusClient _messageBusClient;
 
 
-        public PlatformController(IPlatformRepo platformRepo, IMapper mapper)
+        public PlatformController(IPlatformRepo platformRepo, IMapper mapper, ICommandDataClient commandDataClient,IMessageBusClient messageBusClient)
         {
             _PlatformRepo = platformRepo;
             _mapper = mapper;
+            _commandDataClient = commandDataClient;
+            _messageBusClient = messageBusClient;
+
         }
 
         [HttpGet]
@@ -34,13 +43,32 @@ namespace PlatformService.Controllers
               
         }
         [HttpPost("CreatePlatform")]
-        public ActionResult<Models.DTOs.PlatformDTO> Create(Models.DTOs.PlatformCreateDTO platformCreateDTO)
+        public async Task< ActionResult<Models.DTOs.PlatformDTO>> Create(Models.DTOs.PlatformCreateDTO platformCreateDTO)
         {
             
             var obj = _mapper.Map<Models.Platform>(platformCreateDTO);
              _PlatformRepo.CreatePlatformAsync(obj);
             _PlatformRepo.SaveChanges();
             var platform = _mapper.Map<Models.DTOs.PlatformDTO>(obj);
+            try
+            {
+                await _commandDataClient.SendPlatformToCommand(platform);
+            }catch(Exception ex)
+            {
+              Console.WriteLine($"----> could not send to command platform synchronously{ex.Message}");
+
+            }
+            try
+            {
+                var platformPublishDto= _mapper.Map<PlatformPublishedDto>(platform);
+                platformPublishDto.Event = "Platform_Published";
+                _messageBusClient.PublishNewPlatform(platformPublishDto);
+
+            }catch(Exception ex)
+            {
+              Console.WriteLine($"----> could not send to asynchronously platform{ex.Message}");
+
+            }
 
             return CreatedAtRoute(nameof(GetById), new {id = platform.Id},platform );
         }

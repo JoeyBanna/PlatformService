@@ -2,7 +2,7 @@
 
 namespace PlatformService.Migrations
 {
-    public partial class AddPlatformTableDb : Migration
+    public partial class AddPlatformDbTable : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

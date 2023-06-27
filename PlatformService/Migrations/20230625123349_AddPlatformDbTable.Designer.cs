@@ -9,8 +9,8 @@ using PlatformService.Data;
 namespace PlatformService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20230622123806_AddPlatformTableDb")]
-    partial class AddPlatformTableDb
+    [Migration("20230625123349_AddPlatformDbTable")]
+    partial class AddPlatformDbTable
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

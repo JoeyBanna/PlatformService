@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using PlatformService.Data;
 using PlatformService.Repository;
+using PlatformService.SyncDataServices.HTTP;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,9 +20,11 @@ namespace PlatformService
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public readonly IWebHostEnvironment _env;
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
         }
 
         public IConfiguration Configuration { get; }
@@ -29,8 +32,25 @@ namespace PlatformService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            if (_env.IsDevelopment())
+            {
+              //  services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnectionStrings")));
+                services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase("InMen"));
+               
+            }
+            else
+            {
+                
+               // services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnectionStrings")));
+                services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase("InMen"));
+
+            }
+
+
             services.AddControllers();
-            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnectionStrings")));
+           // services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnectionStrings")));
+            services.AddHttpClient<ICommandDataClient, HTTPCommandDataClients>();
+            services.AddSingleton<AsyncDataServices.IMessageBusClient, AsyncDataServices.MessageBusClient>();
             services.AddScoped<IPlatformRepo, PlatformRepo>();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddSwaggerGen(c =>
@@ -42,6 +62,7 @@ namespace PlatformService
                     Description = "A simple example to PlatformMicroservice UI",
                 });
             });
+            Console.WriteLine(Configuration["CommandService"]);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
